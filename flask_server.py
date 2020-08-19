@@ -1,10 +1,14 @@
+"""
+Run Editor server by using Flask
+"""
 
+from npito import open_folder
 from flask import Flask, render_template
 app = Flask(__name__)
 
 @app.route('/')
 def hello():
-    name = "Hello Flask!!!"
+    name = open_folder()
     return name
 
 @app.route('/index', methods=["GET", "POST"])
