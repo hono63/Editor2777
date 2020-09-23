@@ -2,7 +2,7 @@
 Run Editor server by using Flask
 """
 
-from npito import open_folder
+#from npito import open_folder
 from flask import Flask, render_template
 app = Flask(__name__)
     
