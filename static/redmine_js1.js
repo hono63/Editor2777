@@ -3,6 +3,11 @@
 $("head").append('<link href="https://unpkg.com/tabulator-tables@4.8.1/dist/css/tabulator_simple.min.css" rel="stylesheet">'); // シンプル
 //$("head").append('<link href="https://unpkg.com/tabulator-tables@4.8.1/dist/css/bootstrap/tabulator_bootstrap.min.css" rel="stylesheet">'); // Bootstrap3
 
+var apiKey = "";
+$.get('/redmine/my/account').done(function(data){
+    apiKey = $('#content > div.box > pre', $(data)).first().text();
+});
+
 // Tabulatorのjsを読み込み後、スクリプト実行
 $.getScript("https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js", function () {
     // テーブル埋め込み
@@ -10,22 +15,19 @@ $.getScript("https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js",
 
     var tableHeader = [];
     $('table.issues').find('th').each(function(index, ele){
-        if("checkbox" == $(ele).attr("class")){
-
+        if("checkbox hide-when-print" == $(ele).attr("class")){
+            // do nothing
+        }else if("buttons" == $(ele).attr("class")){
+            // do nothing
         }else if("id" == $(ele).attr("class")){
-            tableHeader.push({title: "#", field: "rid"});
+            tableHeader.push({title: "#", field: "rid", frozen:true, editor:false});
         }else if("tracker" == $(ele).attr("class")){
-            tableHeader.push({title: "Tracker", field: "tracker"});
-        }else if("status" == $(ele).attr("class")){
-            tableHeader.push({title: "Status", field: "status"});
-        }else if("priority" == $(ele).attr("class")){
-            tableHeader.push({title: "優先度", field: "priority"});
-        }else if("subject" == $(ele).attr("class")){
-            tableHeader.push({title: "題名", field: "subject"});
-        }else if("assigned_to" == $(ele).attr("class")){
-            tableHeader.push({title: "担当者", field: "assigned_to"});
+            tableHeader.push({title: $(ele).text(), field: $(ele).attr("class")}); // trackerはedit禁止とする 
+        }else{
+            tableHeader.push({title: $(ele).text(), field: $(ele).attr("class"), editor:true});
         }
     });
+    tableHeader.push({title: "*", field: "updated", width:90, hozAlign:"center", formatter:"tickCross", sorter:"boolean", editor:false});
 
     var tableData = [];
     $('table.issues > tbody').find('tr').each(function(tr_index, tr_ele){
@@ -35,18 +37,11 @@ $.getScript("https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js",
 
             }else if("id" == $(ele).attr("class")){
                 a_data["rid"] = $(ele).text();
-            }else if("tracker" == $(ele).attr("class")){
-                a_data["tracker"] = $(ele).text();
-            }else if("status" == $(ele).attr("class")){
-                a_data["status"] = $(ele).text();
-            }else if("priority" == $(ele).attr("class")){
-                a_data["priority"] = $(ele).text();
-            }else if("subject" == $(ele).attr("class")){
-                a_data["subject"] = $(ele).text();
-            }else if("assigned_to" == $(ele).attr("class")){
-                a_data["assigned_to"] = $(ele).text();
+            }else{
+                a_data[$(ele).attr("class")] = $(ele).text();
             }
         });
+        a_data["updated"] = true;
         tableData.push(a_data);
     });
 
@@ -57,6 +52,31 @@ $.getScript("https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js",
         layout: "fitColumns", //fit columns to width of table (optional)
         columns: tableHeader,
         //autoColumns: true,
+        cellEdited: function(cell){
+            let cell_data = cell["_cell"]["row"]["data"];
+            let issue_url = "/redmine/issues/" + cell_data["rid"] + ".json";
+            let posting_json = {
+                "issue": {
+                    "subject": cell_data["subject"],
+                }
+            };
+            cell.getRow().update({"updated": false});
+            $.ajax({
+                url: issue_url,
+                type: "PUT",
+                data: JSON.stringify(posting_json),
+                headers: {'X-Redmine-API-Key': apiKey},
+                dataType: "text",
+                contentType: 'application/json',
+            })
+            .done(function(data){
+                //alert("Updated!");
+                cell.getRow().update({"updated": true});
+            })
+            .fail(function(xhr, textStatus, errorThrown){
+                alert("Failed: " + xhr.responseText);
+            });
+        },
     });
 
 });
