@@ -23,43 +23,99 @@ $.getScript("https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js",
     // テーブル埋め込み
     $('table.issues').after('<div id="tabulator-issues"></div>');
 
+    // 辞書作成
+    var USERID2NAME = {};
+    var USERNAME2ID = {"":""};
+    var USERS = [];
+    var STATUSID2NAME = {};
+    var STATUSNAME2ID = {};
+    var STATUSES = [];
+    var PRIORITYID2NAME = {};
+    var PRIORITYNAME2ID = {};
+    var PRIORITIES = [];
+    for (let i = 0; i < INFO["users"].length; i++){
+        let id   = INFO["users"][i]["id"];
+        let name = INFO["users"][i]["firstname"] + " " + INFO["users"][i]["lastname"];
+        USERID2NAME[id]   = name;
+        USERNAME2ID[name] = id;
+        USERS.push(name);
+    }
+    for (let i = 0; i < INFO["issue_statuses"].length; i++){
+        let id   = INFO["issue_statuses"][i]["id"];
+        let name = INFO["issue_statuses"][i]["name"];
+        STATUSID2NAME[id]   = name;
+        STATUSNAME2ID[name] = id;
+        STATUSES.push(name);
+    }
+    for (let i = 0; i < INFO["issue_priorities"].length; i++){
+        let id   = INFO["issue_priorities"][i]["id"];
+        let name = INFO["issue_priorities"][i]["name"];
+        PRIORITYID2NAME[id]   = name;
+        PRIORITYNAME2ID[name] = id;
+        PRIORITIES.push(name);
+    }
+
+    // テーブルのヘッダ作成
     var tableHeader = [];
     $('table.issues').find('th').each(function(index, ele){
-        if("checkbox hide-when-print" == $(ele).attr("class")){
+        let cls = $(ele).attr("class");
+        if("checkbox hide-when-print" == cls){
             // do nothing
-        }else if("buttons" == $(ele).attr("class")){
+        }else if("buttons" == cls){
             // do nothing
-        }else if("id" == $(ele).attr("class")){
-            tableHeader.push({title: "#", field: "rid", frozen:true, editor:false});
-        }else if("tracker" == $(ele).attr("class")){
-            tableHeader.push({title: $(ele).text(), field: $(ele).attr("class")}); // trackerはedit禁止とする 
+        }else if("id" == cls){
+            tableHeader.push({title:"#", field:"rid", frozen:true, editor:false, formatter:"html", formatter:function(cell, formatterParams, onRendered){ 
+                // IDにリンクを付けるためのコールバック関数
+                let val = cell.getValue();
+                return '<a href="/redmine/issues/' + val + '">' + val+ '</a>'; 
+            }});
+        }else if("project" == cls || "tracker" == cls || "updated_on" == cls){
+            tableHeader.push({title:$(ele).text(), field:cls}); // project, tracker, 更新日はedit禁止とする 
+        }else if("subject" == cls){
+            tableHeader.push({title:$(ele).text(), field:cls, editor:true, minWidth:300});
+        }else if("assigned_to" == cls){
+            tableHeader.push({title:$(ele).text(), field:cls, editor:"select", editorParams:{values:USERS}}); 
+        }else if("status" == cls){
+            tableHeader.push({title:$(ele).text(), field:cls, editor:"select", editorParams:{values:STATUSES}}); 
+        }else if("priority" == cls){
+            tableHeader.push({title:$(ele).text(), field:cls, editor:"select", editorParams:{values:PRIORITIES}}); 
         }else{
-            tableHeader.push({title: $(ele).text(), field: $(ele).attr("class"), editor:true});
+            tableHeader.push({title:$(ele).text(), field:cls, editor:true});
         }
     });
-    tableHeader.push({title: "*", field: "updated", width:90, hozAlign:"center", formatter:"tickCross", sorter:"boolean", editor:false});
+    tableHeader.push({title: "Upd.", field: "updated", width:90, hozAlign:"center", formatter:"tickCross", sorter:"boolean", editor:false});
 
+    // テーブルのデータ作成
     var tableData = [];
     $('table.issues > tbody').find('tr').each(function(tr_index, tr_ele){
         let a_data = {id: tr_index + 1};
+        let is_description_row = false;
         $(tr_ele).find('td').each(function(index, ele){
-            if("checkbox" == $(ele).attr("class")){
-
-            }else if("id" == $(ele).attr("class")){
+            let cls = $(ele).attr("class");
+            if("checkbox" == cls){
+                // ひとまず無視
+            }else if("description block_column" == cls){
+                // 説明文。この行はひとまず無視
+                is_description_row = true;
+            }else if("id" == cls){
                 a_data["rid"] = $(ele).text();
             }else{
-                a_data[$(ele).attr("class")] = $(ele).text();
+                a_data[cls] = $(ele).text();
             }
         });
-        a_data["updated"] = true;
-        tableData.push(a_data);
+        if(!is_description_row){
+            a_data["updated"] = true;
+            tableData.push(a_data);
+        }
     });
 
+    // テーブル隠す
+    $('table.issues').hide();
 
     var table = new Tabulator("#tabulator-issues", {
-        height: 205, // set height of table (in CSS or here), this enables the Virtual DOM and improves render speed dramatically (can be any valid css height value)
-        data: tableData, //assign data to table
-        layout: "fitColumns", //fit columns to width of table (optional)
+        height: "80%", 
+        data: tableData, 
+        layout: "fitDataStretch", 
         columns: tableHeader,
         //autoColumns: true,
         cellEdited: function(cell){
@@ -68,6 +124,9 @@ $.getScript("https://unpkg.com/tabulator-tables@4.8.1/dist/js/tabulator.min.js",
             let posting_json = {
                 "issue": {
                     "subject": cell_data["subject"],
+                    "assigned_to_id": USERNAME2ID[cell_data["assigned_to"]],
+                    "status_id": STATUSNAME2ID[cell_data["status"]],
+                    "priority_id": PRIORITYNAME2ID[cell_data["priority"]],
                 }
             };
             cell.getRow().update({"updated": false});
