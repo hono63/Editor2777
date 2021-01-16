@@ -4,11 +4,11 @@ from appdb import db
 def json_serializer(model, instance):
 	jdata = {}
 	for k,v in model.__dict__.items():
-		#print(jdata)
-		if k in model.ColInt:
-			jdata[k] = getattr(instance, k)
-		elif k in model.ColStr:
-			jdata[k] = getattr(instance, k)
+            #print(jdata)
+            if k in model.ColInt:
+                jdata[k] = getattr(instance, k)
+            elif k in model.ColStr:
+	        jdata[k] = getattr(instance, k)
 	return jdata
 
 class User(db.Model):
