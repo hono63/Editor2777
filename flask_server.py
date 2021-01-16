@@ -17,8 +17,19 @@ def route():
 
 @app.route('/index', methods=["GET", "POST"])
 def index():
-    return render_template("index.html", users=dbc.get_json_list(User), specs=dbc.get_json_list(Spec))
+    userslist = dbc.get_json_list(User)
+    specslist = dbc.get_json_list(Spec)
+    #print(userslist)
+    return render_template("index.html", users=userslist, specs=specslist)
+
+@app.route('/update-data', methods=["POST"])
+def update_data():
+    if request.form:
+    userslist = dbc.get_json_list(User)
+    specslist = dbc.get_json_list(Spec)
+    #print(userslist)
+    return render_template("index.html", users=userslist, specs=specslist)
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=2777, debug=False)
+    app.run(host="127.0.0.1", port=2777, debug=True)
 

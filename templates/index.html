@@ -1,5 +1,6 @@
 {% extends "template.html" %}
 {% block content %}
+<title>Editor2777</title>
 <!-- Form ================================================== -->
 <div class="form">
   <div class="container">
@@ -22,10 +23,17 @@
   </div>
 </div>
 <h2>Users Table</h2>
+<div class="btn-group" role="group">
+  <button id="#add-user" type="button" class="btn btn-primary">Add</button>
+  <button id="#del-user" type="button" class="btn btn-primary">Del</button>
+</div>
 <div id="user-table"></div>
 <hr>
 <h2>Spec Table</h2>
-<button id="#add-spec" class="button button-primary">Add</button>
+<div class="btn-group" role="group">
+  <button id="#add-spec" type="button" class="btn btn-primary">Add</button>
+  <button id="#del-spec" type="button" class="btn btn-primary">Del</button>
+</div>
 <div id="spec-table"></div>
 <script>
   //define some sample data
@@ -33,13 +41,43 @@
   var specdata  = {{specs|tojson}};
   var usertable = new Tabulator("#user-table", {
     height:400,
-    data:userdata, 
+    data:usersdata, 
     layout:"fitColumns", 
-    columns:[ //Define Table Columns
+    columns:[
       {title:"ID", field:"id", width:100},
-      {title:"Name", field:"name", editor:"input", width:150},
+      {title:"Name", field:"name", editor:"input"},
     ],
-  },
+  });
+  function addData(modelname, newdata, table) {
+    let ajax_data = {};
+    if (newdata == null) {
+      ajax_data = {model: mmodelname, name:"newdata"};
+    } else {
+      ajax_data = Object.assign({model: modelname}, newdata);
+    }
+    $.ajax({
+      url: "update-data",
+      type: "POST",
+      dataType: "json",
+      data: ajax_data,
+      //timeout: 5000,
+    })
+    .done(function(data){
+      let new_id = data["new_id"];
+      if (newdata == null) {
+        table.addData([data]);
+      } else {
+        table.updateData([data]);
+      }
+      alert("Success");
+    })
+    .fail(function(){
+      alert("Failed");
+    })
+  }
+  $("#add-user").clicked({function(){
+    addData("User");
+  });
   var usertable = new Tabulator("#spec-table", {
     height:400,
     data:specdata, 
@@ -49,8 +87,7 @@
       {title:"Name", field:"name", editor:"input", width:200},
       {title:"Definition", field:"definition", editor:"textarea"},
       {title:"Updated", field:"updated"},
-     ],
-    },
+    ],
   });
 </script>
 {% endblock %}

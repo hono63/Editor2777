@@ -8,8 +8,8 @@ class DBCtrl():
         #self.db.init_app(app)
         self.db.create_all()
         # sample
-        self.add(User, {"name": "Junsuke"})
-        self.add(Spec, {"name": "Hyoushi dake"})
+        #self.add(User, {"name": "Junsuke"})
+        #self.add(Spec, {"name": "Hyoushi dake"})
     def get_json_list(self, model):
         datalist = []
         for instance in self.db.session.query(model):
