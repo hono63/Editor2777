@@ -24,70 +24,101 @@
 </div>
 <h2>Users Table</h2>
 <div class="btn-group" role="group">
-  <button id="#add-user" type="button" class="btn btn-primary">Add</button>
-  <button id="#del-user" type="button" class="btn btn-primary">Del</button>
+  <button id="add-user" type="button" class="btn btn-primary">Add</button>
+  <button id="del-user" type="button" class="btn btn-primary">Del</button>
 </div>
 <div id="user-table"></div>
 <hr>
 <h2>Spec Table</h2>
 <div class="btn-group" role="group">
-  <button id="#add-spec" type="button" class="btn btn-primary">Add</button>
-  <button id="#del-spec" type="button" class="btn btn-primary">Del</button>
+  <button id="add-spec" type="button" class="btn btn-primary">Add</button>
+  <button id="del-spec" type="button" class="btn btn-primary">Del</button>
 </div>
 <div id="spec-table"></div>
 <script>
-  //define some sample data
+  // ========= User Table ========== //
   var usersdata = {{users|tojson}};
-  var specdata  = {{specs|tojson}};
   var usertable = new Tabulator("#user-table", {
-    height:400,
+    height:200,
     data:usersdata, 
+    selectable:1,
     layout:"fitColumns", 
     columns:[
       {title:"ID", field:"id", width:100},
       {title:"Name", field:"name", editor:"input"},
     ],
+    cellEdited:function(cell){
+      addData("User", cell.getData(), usertable);
+    },
+  });
+  $("#add-user").on("click", function(){
+    addData("User", null, usertable);
+  });
+  $("#del-user").on("click", function(){
+    deleteData("User", usertable.getSelectedRows()[0].getData(), usertable);
+  });
+  // ========= Spec Table ========== //
+  var specdata  = {{specs|tojson}};
+  var spectable = new Tabulator("#spec-table", {
+    height:200,
+    data:specdata, 
+    selectable: 1,
+    layout:"fitColumns", 
+    columns:[ 
+      {title:"ID", field:"id", width:100},
+      {title:"GUID", field:"guid", width:100},
+      {title:"Name", field:"name", editor:"input", width:200},
+      {title:"Definition", field:"definition", editor:"textarea"},
+      {title:"Updated", field:"updated"},
+    ],
+    cellEdited:function(cell){
+      addData("Spec", cell.getData(), spectable);
+    },
+  });
+  $("#add-spec").on("click", function(){
+    addData("Spec", null, spectable);
+  });
+  $("#del-spec").on("click", function(){
+    deleteData("Spec", spectable.getSelectedRows()[0].getData(), spectable);
   });
   function addData(modelname, newdata, table) {
     let ajax_data = {};
     if (newdata == null) {
-      ajax_data = {model: mmodelname, name:"newdata"};
+      ajax_data = {modelname: modelname, name:"newdata", flag_addupd: 1};
     } else {
-      ajax_data = Object.assign({model: modelname}, newdata);
+      ajax_data = Object.assign({modelname: modelname, flag_addupd: 1}, newdata);
     }
     $.ajax({
       url: "update-data",
       type: "POST",
-      dataType: "json",
       data: ajax_data,
-      //timeout: 5000,
+      timeout: 5000,
     })
     .done(function(data){
-      let new_id = data["new_id"];
-      if (newdata == null) {
-        table.addData([data]);
-      } else {
-        table.updateData([data]);
-      }
-      alert("Success");
+      let upd_data = data["updated_data"];
+      table.updateOrAddData([upd_data]);
+      //alert("Success");
     })
     .fail(function(){
       alert("Failed");
     })
   }
-  $("#add-user").clicked({function(){
-    addData("User");
-  });
-  var usertable = new Tabulator("#spec-table", {
-    height:400,
-    data:specdata, 
-    layout:"fitColumns", 
-    columns:[ 
-      {title:"ID", field:"guid", width:100},
-      {title:"Name", field:"name", editor:"input", width:200},
-      {title:"Definition", field:"definition", editor:"textarea"},
-      {title:"Updated", field:"updated"},
-    ],
-  });
+  function deleteData(modelname, deldata, table) {
+    let del_id = deldata["id"];
+    let ajax_data = {modelname: modelname, id: del_id, flag_delete: 1};
+    $.ajax({
+      url: "update-data",
+      type: "POST",
+      data: ajax_data,
+      timeout: 5000,
+    })
+    .done(function(data){
+      table.deleteRow(del_id);
+      //alert("Success");
+    })
+    .fail(function(){
+      alert("Failed");
+    })
+  }
 </script>
 {% endblock %}
